@@ -1,3 +1,6 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,19 +10,114 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
+// --- EscapadasGram Data Model ---
+
+enum RolUsuario {
+  VIAJERO
+  PROPIETARIO
+  ADMIN
+}
+
+model Usuario {
+  id        Int         @id @default(autoincrement())
+  email     String      @unique
+  nombre    String
+  password  String
+  rol       RolUsuario  @default(VIAJERO)
+  resenas   Resena[]
+  guardados Guardado[]
+  lugares   Lugar[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model Lugar {
+  id            Int         @id @default(autoincrement())
+  nombre        String
+  descripcion   String      @db.Text
+  direccion     String
+  latitud       Float?
+  longitud      Float?
+  
+  propietario   Usuario?    @relation(fields: [propietarioId], references: [id])
+  propietarioId Int?
+
+  categoria     Categoria   @relation(fields: [categoriaId], references: [id])
+  categoriaId   Int
+
+  ciudad        Ciudad      @relation(fields: [ciudadId], references: [id])
+  ciudadId      Int
+
+  media         Media[]
+  resenas       Resena[]
+  guardadoPor   Guardado[]
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Categoria {
+  id      Int     @id @default(autoincrement())
+  nombre  String  @unique
+  lugares Lugar[]
+}
+
+model Provincia {
   id      Int      @id @default(autoincrement())
-  email   String   @unique
-  name    String?
-  posts   Post[]
+  nombre  String   @unique
+  ciudades Ciudad[]
 }
 
-model Post {
-  id        Int     @id @default(autoincrement())
-  title     String
-  content   String?
-  published Boolean @default(false)
-  author    User?   @relation(fields: [authorId], references: [id])
-  authorId  Int?
+model Ciudad {
+  id          Int       @id @default(autoincrement())
+  nombre      String
+  provincia   Provincia @relation(fields: [provinciaId], references: [id])
+  provinciaId Int
+  lugares     Lugar[]
+
+  @@unique([nombre, provinciaId])
 }
 
+enum TipoMedia {
+  FOTO
+  VIDEO
+}
+
+model Media {
+  id      Int       @id @default(autoincrement())
+  url     String
+  tipo    TipoMedia @default(FOTO)
+  lugar   Lugar     @relation(fields: [lugarId], references: [id])
+  lugarId Int
+}
+
+model Resena {
+  id         Int      @id @default(autoincrement())
+  rating     Int
+  comentario String?  @db.Text
+  
+  autor      Usuario  @relation(fields: [autorId], references: [id])
+  autorId    Int
+
+  lugar      Lugar    @relation(fields: [lugarId], references: [id])
+  lugarId    Int
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([autorId, lugarId])
+}
+
+model Guardado {
+  id      Int     @id @default(autoincrement())
+  
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+  usuarioId Int
+
+  lugar     Lugar   @relation(fields: [lugarId], references: [id])
+  lugarId   Int
+
+  createdAt DateTime @default(now())
+
+  @@unique([usuarioId, lugarId])
+}
